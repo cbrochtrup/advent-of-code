@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -19,25 +20,39 @@ func field_info(field string) (string, string) {
 func valid_data(field string, data string) bool {
 	switch f := field; f {
 	case "byr":
-		d := strconv.Atoi(data)
+		d, _ := strconv.Atoi(data)
 		return d >= 1920 && d <= 2003
 	case "iyr":
-		d := strconv.Atoi(data)
+		d, _ := strconv.Atoi(data)
 		return d >= 2010 && d <= 2020
+	case "eyr":
+		d, _ := strconv.Atoi(data)
+		return d >= 2020 && d <= 2030
 	case "hgt":
-		units = string(data[len(data)-2:])
+		units := string(data[len(data)-2:])
 		if units == "cm" {
-			d := strconv.Atoi(string(data[:len(data)-2]))
+			d, _ := strconv.Atoi(string(data[:len(data)-2]))
 			return d >= 150 && d <= 193
 		} else if units == "in" {
-			d := strconv.Atoi(string(data[:len(data)-2]))
+			d, _ := strconv.Atoi(string(data[:len(data)-2]))
 			return d >= 59 && d <= 76
 		} else {
 			return false
 		}
 	case "hcl":
+		ret, _ := regexp.MatchString(`^#[0-9a-f]{6}$`, data)
+		return ret
 	case "ecl":
+		valid_colors := []string{"amb", "blu", "brn", "gry", "grn", "hzl", "oth"}
+		for _, c := range valid_colors {
+			if c == data {
+				return true
+			}
+		}
+		return false
 	case "pid":
+		ret, _ := regexp.MatchString(`^[0-9]{9}$`, data)
+		return ret
 	default:
 		return false
 	}
@@ -74,7 +89,6 @@ func main() {
 	data := string(b)
 
 	required_fields := []string{"byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid"}
-	// optional: cid
 
 	line_data := strings.Split(data, "\n")
 	req_fields := required_fields
@@ -83,8 +97,9 @@ func main() {
 		info := strings.Fields(line)
 		for _, item := range info {
 			field, data := field_info(item)
-			// fmt.Printf("%q, %q\n", req_fields, strings.Split(item, ":")[0])
-			req_fields = remove(req_fields, strings.Split(item, ":")[0])
+			if valid_data(field, data) {
+				req_fields = remove(req_fields, strings.Split(item, ":")[0])
+			}
 		}
 
 		// Passport info ends on blank lines
